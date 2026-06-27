@@ -326,7 +326,7 @@ const TIPOS_IMPORT = {
     histKey: "crm_hist_perfil_bancario",
     destino: "Ficha do cliente + Oportunidades"
   },
-  iea: { icon: "💪",
+  iea: { icon: "💪 Esforços do Assessor",
     descricao: "IEA · Prospecção · Relacionamento · Atividades · Churn · Saúde do Assessor",
     formatos: ".xlsx · .xls · .csv",
     dbKey: "crm_import_iea",
