@@ -167,8 +167,8 @@ export function CDetalhe({ c, onBack, tarefas, reunioes, oport }) {
                     <th style={{ padding: 6 }}>Sub-Produto</th>
                     <th style={{ padding: 6 }}>Ativo/Papel</th>
                     <th style={{ padding: 6 }}>Emissor</th>
-                    <th style={{ padding: 6, textAlign: "right" }}>Quantidade</th>
-                    <th style={{ padding: 6, textAlign: "right" }}>Net Patrimônio</th>
+                    <th style={{ padding: 6 }} style={{ textAlign: "right" }}>Quantidade</th>
+                    <th style={{ padding: 6 }} style={{ textAlign: "right" }}>Net Patrimônio</th>
                   </tr>
                 </thead>
                 <tbody>
