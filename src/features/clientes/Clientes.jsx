@@ -24,7 +24,7 @@ function mapearCliente(c) {
     cap: c.captacao_bruta_m || 0,
     res: c.resgate_m || 0,
     d0: c.saldo_real_d0 !== null && c.saldo_real_d0 !== undefined ? c.saldo_real_d0 : (c.aloc_financeiro || 0),
-     ader: c.aderencia ?? null, 
+    // ader: c.aderencia ?? null, 
     ader: c.aderencia || null, 
     ult: c.atualizado_em || c.importado_em || "–",
     
