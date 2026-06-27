@@ -126,6 +126,7 @@ const MAPA_COLUNAS = {
     periodo:       ["período", "periodo", "data", "competência", "competencia", "mês", "mes"],
   }
 
+
 // ── LABELS AMIGÁVEIS PARA PREVIEW ────────────────────────────────────────────
 const LABELS_POSITIVADOR = {
   assessor:             "Assessor",
@@ -255,7 +256,7 @@ const TIPOS_IMPORT = {
     histKey: "crm_hist_qualidade",
     destino: "Ficha do cliente + Carteira"
   },
-  iea: { icon: "💪 Esforços do Assessor",
+  iea: {
     mes_ano:                    ["mês/ano", "mes/ano", "mês", "mes"],
     cod_grupo:                  ["cód. grupo", "cod. grupo", "cod grupo"],
     grupo_economico:            ["grupo econômico", "grupo economico"],
@@ -299,7 +300,6 @@ const TIPOS_IMPORT = {
   },
 
   perfil_bancario: {
-    label: "Perfil Bancário", icon: "🏦",
     conta:              ["cód.conta", "cod.conta", "cód. conta", "cod. conta", "conta"],
     cod_escritorio:     ["cód. escritório", "cod. escritorio"],
     escritorio:         ["escritório", "escritorio"],
@@ -318,8 +318,21 @@ const TIPOS_IMPORT = {
     faixa_pgto_m2:      ["faixa pagamento m-2", "pagamento m-2"],
   },
 
-  
-
+  perfil_bancario: {
+    label: "Perfil Bancário", icon: "🏦",
+    descricao: "Elegibilidade · Portabilidade · Pix · Boleto · Fatura · Faixas de Pagamento",
+    formatos: ".xlsx · .xls · .csv",
+    dbKey: "crm_import_perfil_bancario",
+    histKey: "crm_hist_perfil_bancario",
+    destino: "Ficha do cliente + Oportunidades"
+  },
+  iea: { icon: "💪",
+    descricao: "IEA · Prospecção · Relacionamento · Atividades · Churn · Saúde do Assessor",
+    formatos: ".xlsx · .xls · .csv",
+    dbKey: "crm_import_iea",
+    histKey: "crm_hist_iea",
+    destino: "Painel Admin + Dashboard Assessor"
+  },
   xperformance: {
     label: "XPerformance", icon: "📈",
     descricao: "Rentabilidade, performance, benchmark e movimentações",
