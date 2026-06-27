@@ -1,0 +1,10 @@
+node_modules/
+dist/
+
+# Banco de dados SQLite
+*.db
+*.db-shm
+*.db-wal
+
+.env
+.vscode/

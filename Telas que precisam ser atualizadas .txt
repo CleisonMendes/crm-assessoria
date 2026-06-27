@@ -1,0 +1,10 @@
+Telas que precisam ser atualizadas:
+
+Clientes — ficha completa com todos os dados cruzados
+Carteira — NET, captação, alocação, diversificação
+Dashboard — KPIs consolidados
+Admin — IEA + visão por assessor
+Plano — metas vs realizado
+
+
+Comando para executar API : npm run dev:full
