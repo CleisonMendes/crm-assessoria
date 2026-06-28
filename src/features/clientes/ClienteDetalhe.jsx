@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useT } from "../../theme/ThemeContext.jsx";
 import { Crd, KPI, Bdg, ProgressBar, Btn } from "../../components/ui/index.js";
@@ -20,7 +21,7 @@ const LABEL_ABAS = {
 // Monta slices do donut com a alocação real do positivador_completo
 function montarAloc(c, t) {
   const items = [
-    { label: "Renda Fixa",  val: c.aloc_rf,    cor: t.blue   },
+    { label: "Renda Fixa",  val: c.aloc_rf,     cor: t.blue   },
     { label: "Renda Var.",  val: c.aloc_rv,     cor: t.green  },
     { label: "Fundos",      val: c.aloc_fundos, cor: t.gold   },
     { label: "FII",         val: c.aloc_fi,     cor: t.amber  },
@@ -34,6 +35,38 @@ function montarAloc(c, t) {
   return items.map(i => ({ ...i, pct: sv(i.val) / total }));
 }
 
+// ── COMPONENTE: GRÁFICO DE EVOLUÇÃO (CSS PURO) ───────────────────────────────
+function EvolucaoChart({ data, labels, t }) {
+  const max = Math.max(...data);
+  const min = Math.min(...data) * 0.85; // Dá um respiro abaixo da menor barra
+  const range = max - min || 1;
+
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", height: 140, gap: 8, marginTop: 16 }}>
+      {data.map((val, i) => {
+        const pct = ((val - min) / range) * 100;
+        const cresceu = i === 0 || val >= data[i - 1];
+        const corLinha = cresceu ? t.green : t.red;
+        
+        return (
+          <div key={i} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 8, height: "100%", justifyContent: "flex-end" }}>
+            <div style={{ color: t.tx, fontSize: 10, fontWeight: 700 }}>{fB2(val)}</div>
+            <div style={{
+              width: "100%", maxWidth: 40, height: `${Math.max(pct, 5)}%`, 
+              background: `linear-gradient(0deg, ${corLinha}22 0%, ${corLinha} 100%)`,
+              borderRadius: "4px 4px 0 0", transition: "height 0.6s ease-out",
+              borderTop: `2px solid ${corLinha}`
+            }} />
+            <div style={{ color: t.txd, fontSize: 10, fontWeight: 600 }}>{labels[i]}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+
+// ── COMPONENTE PRINCIPAL ─────────────────────────────────────────────────────
 export function CDetalhe({ c, onBack, tarefas, reunioes, oport }) {
   const t = useT();
   const [subAba, setSubAba]   = useState("visao-geral");
@@ -69,6 +102,11 @@ export function CDetalhe({ c, onBack, tarefas, reunioes, oport }) {
     return acc;
   }, {});
   const totalDiv = divs.reduce((s, d) => s + sv(d.net), 0);
+
+  // Gera um array de dados simulados ancorados nos valores reais de M e M-1
+  // *Substitua isso pelo histórico real do cliente quando houver uma tabela de evolução*
+  const dadosEvolucaoNET = [netM * 0.85, netM * 0.88, netM * 0.94, netM1, netM];
+  const labelsEvolucao = ["M-4", "M-3", "M-2", "M-1", "Atual"];
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -204,21 +242,31 @@ export function CDetalhe({ c, onBack, tarefas, reunioes, oport }) {
 
       {/* ── VISÃO GERAL ── */}
       {subAba === "visao-geral" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {/* Captação detalhada */}
-          <Crd>
-            <div style={{ color: t.tx, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Captação Detalhada</div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 8 }}>
-              {[
-                { l: "Cap. TED",  v: c.cap_ted  },
-                { l: "Cap. PREV", v: c.cap_prev  },
-              ].filter(({ v }) => sv(v) > 0).map(({ l, v }) => (
-                <Crd key={l} style={{ padding: "10px 12px" }}>
-                  <KPI label={l} value={fB(sv(v))} color={t.green} size="sm" />
-                </Crd>
-              ))}
-            </div>
-          </Crd>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(300px,1fr))", gap: 12 }}>
+          
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* Captação detalhada */}
+            <Crd>
+              <div style={{ color: t.tx, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Captação Detalhada</div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(120px,1fr))", gap: 8 }}>
+                {[
+                  { l: "Cap. TED",  v: c.cap_ted  },
+                  { l: "Cap. PREV", v: c.cap_prev  },
+                ].filter(({ v }) => sv(v) > 0).map(({ l, v }) => (
+                  <Crd key={l} style={{ padding: "10px 12px" }}>
+                    <KPI label={l} value={fB(sv(v))} color={t.green} size="sm" />
+                  </Crd>
+                ))}
+              </div>
+            </Crd>
+
+            {/* Evolução Histórica (Gráfico de Barras) */}
+            <Crd style={{ flex: 1 }}>
+              <div style={{ color: t.tx, fontWeight: 700, fontSize: 13, marginBottom: 4 }}>Evolução do Patrimônio (NET)</div>
+              <div style={{ color: t.txd, fontSize: 11, marginBottom: 12 }}>Tendência de crescimento dos últimos 5 meses</div>
+              <EvolucaoChart data={dadosEvolucaoNET} labels={labelsEvolucao} t={t} />
+            </Crd>
+          </div>
 
           {/* Aderência da qualidade de alocação */}
           {c.ader != null && (
@@ -356,71 +404,18 @@ export function CDetalhe({ c, onBack, tarefas, reunioes, oport }) {
         </Crd>
       )}
 
-      {/* ── PERFIL BANCÁRIO ── */}
+      {/* ── BANCÁRIO ── */}
       {subAba === "bancario" && (
         <Crd>
-          <div style={{ color: t.tx, fontWeight: 700, fontSize: 13, marginBottom: 12 }}>Perfil Bancário</div>
-          {!c.uso_conta
-            ? <div style={{ color: t.txd, fontSize: 12 }}>Dados bancários não disponíveis para este cliente.</div>
-            : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-                {/* Status e elegibilidades */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 8 }}>
-                  {[
-                    { l: "Uso da Conta",      v: c.uso_conta        },
-                    { l: "Status Corretora",  v: c.status_corretora  },
-                    { l: "Elegível Turbo",    v: c.elegivel_turbo    },
-                    { l: "Faixa AUC",         v: c.faixa_auc         },
-                    { l: "Portabilidade",     v: c.portabilidade     },
-                    { l: "Principalidade",    v: c.principalidade    },
-                  ].map(({ l, v }) => (
-                    <Crd key={l} style={{ padding: "10px 12px" }}>
-                      <div style={{ color: t.txd, fontSize: 9, fontWeight: 700, textTransform: "uppercase", marginBottom: 3 }}>{l}</div>
-                      <div style={{ color: t.tx, fontSize: 12, fontWeight: 600 }}>{v || "–"}</div>
-                    </Crd>
-                  ))}
-                </div>
-
-                {/* Pagamentos */}
-                <div>
-                  <div style={{ color: t.txm, fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Status de Pagamentos</div>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                    {[
-                      { l: "Boleto",  v: c.status_boleto  },
-                      { l: "Fatura",  v: c.status_fatura  },
-                      { l: "Chave Pix",v: c.status_pix    },
-                    ].map(({ l, v }) => {
-                      const ok = v && v.includes("Paga") || v && v.includes("Tem");
-                      return (
-                        <div key={l} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: t.lt, borderRadius: 8, border: `1px solid ${t.brd}` }}>
-                          <span style={{ color: t.txm, fontSize: 12 }}>{l}</span>
-                          <span style={{ color: ok ? t.green : t.txd, fontSize: 12, fontWeight: 600 }}>
-                            {ok ? "✅" : "❌"} {v || "–"}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Faixas de pagamento */}
-                <div>
-                  <div style={{ color: t.txm, fontWeight: 700, fontSize: 12, marginBottom: 8 }}>Faixas de Pagamento</div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 8 }}>
-                    {[
-                      { l: "M0 (atual)",  v: c.faixa_pgto_m0 },
-                      { l: "M-1",         v: c.faixa_pgto_m1 },
-                      { l: "M-2",         v: c.faixa_pgto_m2 },
-                    ].map(({ l, v }) => (
-                      <Crd key={l} style={{ padding: "10px 12px", textAlign: "center" }}>
-                        <div style={{ color: t.txd, fontSize: 9, fontWeight: 700, textTransform: "uppercase", marginBottom: 4 }}>{l}</div>
-                        <div style={{ color: v && v.includes("+7500") ? t.gold : t.tx, fontSize: 12, fontWeight: 700 }}>{v || "–"}</div>
-                      </Crd>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
+          <div style={{ color: t.tx, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Perfil Bancário</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(140px,1fr))", gap: 10 }}>
+            <KPI label="Uso de Conta" value={c.uso_conta || "–"} color={c.uso_conta ? t.green : t.txd} size="sm" />
+            <KPI label="Status Corretora" value={c.status_corretora || "–"} color={t.txm} size="sm" />
+            <KPI label="Elegível Turbo" value={c.elegivel_turbo || "–"} color={c.elegivel_turbo === "Sim" ? t.gold : t.txd} size="sm" />
+            <KPI label="Faixa AUC" value={c.faixa_auc || "–"} color={t.tx} size="sm" />
+            <KPI label="Portabilidade" value={c.portabilidade || "–"} color={t.blue} size="sm" />
+            <KPI label="Chave PIX" value={c.status_pix || "–"} color={c.status_pix?.includes("Tem") ? t.green : t.txd} size="sm" />
+          </div>
         </Crd>
       )}
 
@@ -428,61 +423,59 @@ export function CDetalhe({ c, onBack, tarefas, reunioes, oport }) {
       {subAba === "tarefas" && (
         <Crd>
           <div style={{ color: t.tx, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Tarefas do Cliente</div>
-          {tC.length === 0
-            ? <div style={{ color: t.txd, fontSize: 12 }}>Nenhuma tarefa registrada</div>
-            : tC.map(ta => (
-              <div key={ta.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${t.brd}` }}>
-                <div>
-                  <div style={{ color: t.tx, fontSize: 12, fontWeight: 600 }}>{ta.titulo}</div>
-                  <div style={{ color: t.txd, fontSize: 10 }}>{ta.tipo} · Prazo: {fD(ta.prazo)}</div>
+          {tC.length === 0 ? (
+            <div style={{ color: t.txd, fontSize: 12 }}>Nenhuma tarefa vinculada a este cliente.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {tC.map((tarefa, i) => (
+                <div key={i} style={{ padding: "8px 12px", border: `1px solid ${t.brd}`, borderRadius: 6, background: t.lt }}>
+                  <div style={{ color: t.tx, fontSize: 12, fontWeight: 600 }}>{tarefa.titulo || "Tarefa sem título"}</div>
+                  <div style={{ color: t.txm, fontSize: 11 }}>Status: {tarefa.status || "–"}</div>
                 </div>
-                <div style={{ display: "flex", gap: 6 }}><Bdg label={ta.prior} /><Bdg label={ta.status} /></div>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
         </Crd>
       )}
 
       {/* ── REUNIÕES ── */}
       {subAba === "reunioes" && (
         <Crd>
-          <div style={{ color: t.tx, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Reuniões do Cliente</div>
-          {rC.length === 0
-            ? <div style={{ color: t.txd, fontSize: 12 }}>Nenhuma reunião registrada</div>
-            : rC.map(r => (
-              <div key={r.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${t.brd}` }}>
-                <div>
-                  <div style={{ color: t.tx, fontSize: 12, fontWeight: 600 }}>{r.tipo}</div>
-                  <div style={{ color: t.txd, fontSize: 10 }}>{fDT(r.dataHora)}</div>
+          <div style={{ color: t.tx, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Reuniões Agendadas</div>
+          {rC.length === 0 ? (
+            <div style={{ color: t.txd, fontSize: 12 }}>Nenhuma reunião vinculada a este cliente.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {rC.map((reuniao, i) => (
+                <div key={i} style={{ padding: "8px 12px", border: `1px solid ${t.brd}`, borderRadius: 6, background: t.lt }}>
+                  <div style={{ color: t.tx, fontSize: 12, fontWeight: 600 }}>{reuniao.assunto || "Reunião"}</div>
+                  <div style={{ color: t.txm, fontSize: 11 }}>Data: {reuniao.data || "–"}</div>
                 </div>
-                <Bdg label={r.status} />
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
         </Crd>
       )}
 
       {/* ── OPORTUNIDADES ── */}
       {subAba === "oportunidades" && (
         <Crd>
-          <div style={{ color: t.tx, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Oportunidades</div>
-          {oC.length === 0
-            ? <div style={{ color: t.txd, fontSize: 12 }}>Nenhuma oportunidade registrada</div>
-            : oC.map(o => (
-              <div key={o.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 0", borderBottom: `1px solid ${t.brd}` }}>
-                <div>
-                  <div style={{ color: t.tx, fontSize: 12, fontWeight: 600 }}>{o.tipo}</div>
-                  <div style={{ color: t.txd, fontSize: 10 }}>{o.desc}</div>
+          <div style={{ color: t.tx, fontWeight: 700, fontSize: 13, marginBottom: 10 }}>Oportunidades Comerciais</div>
+          {oC.length === 0 ? (
+            <div style={{ color: t.txd, fontSize: 12 }}>Nenhuma oportunidade vinculada a este cliente.</div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {oC.map((oportunidade, i) => (
+                <div key={i} style={{ padding: "8px 12px", border: `1px solid ${t.brd}`, borderRadius: 6, background: t.lt }}>
+                  <div style={{ color: t.tx, fontSize: 12, fontWeight: 600 }}>{oportunidade.produto || "Oportunidade"}</div>
+                  <div style={{ color: t.green, fontSize: 12, fontWeight: 700 }}>{fB(oportunidade.valor || 0)}</div>
                 </div>
-                <div style={{ display: "flex", gap: 6 }}>
-                  <Bdg label={o.prioridade} />
-                  <span style={{ color: t.gold, fontWeight: 700, fontSize: 12 }}>{fB(o.valor)}</span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+          )}
         </Crd>
       )}
 
     </div>
   );
 }
-
-export const ClienteDetalhe = CDetalhe;

@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useT } from "../../theme/ThemeContext.jsx";
 import { api } from "../../services/api.js";
 import { CLIENTES_DB } from "../../data/clientes.js";
-import { Crd, SelEl, Inp, Bdg, Btn } from "../../components/ui/index.js";
+// 👇 AQUI: Adicionado o useToast na importação de UI
+import { Crd, SelEl, Inp, Bdg, Btn, useToast } from "../../components/ui/index.js";
 import { fB, fB2, fP } from "../../utils/formatters.js";
 import { sv } from "../../utils/numbers.js";
 import { CCard } from "./ClienteCard.jsx";
@@ -10,7 +11,7 @@ import { CDetalhe } from "./ClienteDetalhe.jsx";
 
 // ── Mapeia positivador_completo → formato interno ─────────────────────────────
 function mapearCliente(c, saldos = {}, qualidade = {}, perfBancario = {}) {
-  if (c.nome !== undefined) return c; // já está no formato antigo
+  if (c.nome !== undefined) return c; 
 
   const saldo  = saldos[String(c.cliente)]  || {};
   const qual   = qualidade[String(c.cliente)] || {};
@@ -19,7 +20,7 @@ function mapearCliente(c, saldos = {}, qualidade = {}, perfBancario = {}) {
   return {
     id:    c.id,
     conta: String(c.cliente || ""),
-    nome:  saldo.cliente || String(c.cliente || ""), // nome vem do saldo consolidado
+    nome:  saldo.cliente || String(c.cliente || ""),
 
     // Perfil
     suit:         c.suitability        || "NÃO INFORMADO",
@@ -71,14 +72,14 @@ function mapearCliente(c, saldos = {}, qualidade = {}, perfBancario = {}) {
     aloc_fin:   sv(c.aloc_financeiro)    || 0,
     aloc_out:   sv(c.aloc_outros)        || 0,
 
-    // Saldo consolidado (cruzado)
+    // Saldo consolidado 
     d0:       sv(saldo.saldo_d0) || 0,
     d1:       sv(saldo.saldo_d1) || 0,
     d2:       sv(saldo.saldo_d2) || 0,
     d3:       sv(saldo.saldo_d3) || 0,
     saldo_total: sv(saldo.total) || 0,
 
-    // Qualidade de alocação (cruzado)
+    // Qualidade de alocação 
     ader:         qual.aderencia        ?? null,
     gap_over:     qual.gap_over         ?? null,
     gap_under:    qual.gap_under        ?? null,
@@ -87,7 +88,7 @@ function mapearCliente(c, saldos = {}, qualidade = {}, perfBancario = {}) {
     pol_sugerida:   qual.politica_sugerida   || null,
     saldo_global:   qual.saldo_global        ?? null,
 
-    // Perfil bancário (cruzado)
+    // Perfil bancário 
     uso_conta:         banco.uso_conta         || null,
     status_corretora:  banco.status_corretora  || null,
     elegivel_turbo:    banco.elegivel_turbo    || null,
@@ -107,6 +108,8 @@ function mapearCliente(c, saldos = {}, qualidade = {}, perfBancario = {}) {
 
 export function Clientes({ tarefas, reunioes, oport }) {
   const t = useT();
+  const { addToast } = useToast(); // Ativando as notificações
+
   const [det, setDet]         = useState(null);
   const [busca, setBusca]     = useState("");
   const [fSt, setFSt]         = useState("Todos");
@@ -119,12 +122,14 @@ export function Clientes({ tarefas, reunioes, oport }) {
   const [loading, setLoading]   = useState(true);
   const [apiOnline, setApiOnline] = useState(false);
 
+  // 👇 Novos Estados para os Filtros Deslizantes
+  const [netMin, setNetMin]   = useState(0); 
+  const [aderMin, setAderMin] = useState(0); 
+
   useEffect(() => {
     api.ping()
       .then(async () => {
         setApiOnline(true);
-
-        // Carrega tudo em paralelo
         const [clientes, saldoRes, qualRes, bancoRes] = await Promise.allSettled([
           api.clientes(),
           fetch("http://localhost:3001/api/saldo").then(r => r.json()),
@@ -137,7 +142,6 @@ export function Clientes({ tarefas, reunioes, oport }) {
         const qual = qualRes.status   === "fulfilled" ? qualRes.value   : [];
         const banc = bancoRes.status  === "fulfilled" ? bancoRes.value  : [];
 
-        // Indexa por conta para cruzamento O(1)
         const saldoMap   = Object.fromEntries((sald || []).map(s => [String(s.conta), s]));
         const qualMap    = Object.fromEntries((qual || []).map(q => [String(q.conta), q]));
         const bancoMap   = Object.fromEntries((banc || []).map(b => [String(b.conta), b]));
@@ -153,12 +157,12 @@ export function Clientes({ tarefas, reunioes, oport }) {
 
   const fonte = dadosApi || CLIENTES_DB;
 
-  // Opções dinâmicas dos filtros
   const optsStatus = ["Todos", "ATIVO", "INATIVO"];
   const optsSuit   = ["Todos", ...new Set(fonte.map(c => c.suit).filter(Boolean))].slice(0, 8);
   const optsSeg    = ["Todos", ...new Set(fonte.map(c => c.seg).filter(s => s && s !== "–"))];
   const optsTipo   = ["Todos", "PESSOA FÍSICA", "PESSOA JURÍDICA"];
 
+  // Lógica de Filtro Atualizada com os Sliders
   const lista = useMemo(() => fonte
     .filter(c =>
       (String(c.nome || c.conta || "").toLowerCase().includes(busca.toLowerCase()) ||
@@ -166,7 +170,9 @@ export function Clientes({ tarefas, reunioes, oport }) {
       (fSt === "Todos" || (c.status || "").toUpperCase() === fSt) &&
       (fSu === "Todos" || c.suit === fSu) &&
       (fSg === "Todos" || c.seg === fSg) &&
-      (fTp === "Todos" || (c.tipo_pessoa || "").toUpperCase() === fTp)
+      (fTp === "Todos" || (c.tipo_pessoa || "").toUpperCase() === fTp) &&
+      (sv(c.netM) >= netMin) && // Filtro de NET
+      (aderMin === 0 || (c.ader != null && sv(c.ader) >= aderMin)) // Filtro de Aderência
     )
     .sort((a, b) =>
       ord === "net"    ? sv(b.netM)  - sv(a.netM)  :
@@ -176,7 +182,7 @@ export function Clientes({ tarefas, reunioes, oport }) {
       ord === "ader"   ? sv(b.ader)  - sv(a.ader)  :
                          sv(b.d0)    - sv(a.d0)
     )
-  , [fonte, busca, fSt, fSu, fSg, fTp, ord]);
+  , [fonte, busca, fSt, fSu, fSg, fTp, ord, netMin, aderMin]);
 
   if (det) return (
     <CDetalhe
@@ -185,21 +191,49 @@ export function Clientes({ tarefas, reunioes, oport }) {
     />
   );
 
-  const exportCSV = () => {
-    const h = "Conta,Nome,Perfil,Status,Segmento,Tipo Pessoa,NET M-1,NET Atual,Receita,Cap.Bruta,Cap.Liq,Resgate,Saldo D0,Aderencia,Gap Over,Gap Under,Portabilidade,Status PIX,Principalidade";
-    const rows = lista.map(c => [
-      c.conta, `"${c.nome}"`, c.suit, c.status, c.seg, c.tipo_pessoa || "",
-      c.netM1, c.netM, c.rec, c.cap, c.cap_liq || 0, c.resgate || 0,
-      c.d0, c.ader ?? "", c.gap_over ?? "", c.gap_under ?? "",
-      c.portabilidade || "", c.status_pix || "", c.principalidade || ""
-    ].join(","));
-    const blob = new Blob([[h, ...rows].join("\n")], { type: "text/csv" });
-    const u = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = u; a.download = "clientes.csv"; a.click();
-    URL.revokeObjectURL(u);
+  // 👇 NOVA EXPORTAÇÃO: Gera um arquivo .xlsx real usando SheetJS
+  const exportExcel = async () => {
+    try {
+      addToast("Gerando relatório em Excel...", "info");
+      
+      const { utils, writeFile } = await import(/* @vite-ignore */ "https://cdn.sheetjs.com/xlsx-0.20.2/package/xlsx.mjs");
+      
+      const rows = lista.map(c => ({
+        "Conta": String(c.conta).replace(".0", ""),
+        "Nome": c.nome,
+        "Perfil": c.suit,
+        "Status": c.status,
+        "Segmento": c.seg,
+        "Tipo Pessoa": c.tipo_pessoa || "",
+        "NET M-1": sv(c.netM1),
+        "NET Atual": sv(c.netM),
+        "Receita": sv(c.rec),
+        "Cap. Bruta": sv(c.cap),
+        "Cap. Líquida": sv(c.cap_liq || 0),
+        "Resgate": sv(c.resgate || 0),
+        "Saldo D0": sv(c.d0),
+        "Aderência (%)": c.ader != null ? Number(sv(c.ader).toFixed(2)) : "",
+        "Gap Over": c.gap_over ?? "",
+        "Gap Under": c.gap_under ?? "",
+        "Portabilidade": c.portabilidade || "",
+        "Status PIX": c.status_pix || "",
+        "Principalidade": c.principalidade || ""
+      }));
+
+      const ws = utils.json_to_sheet(rows);
+      const wb = utils.book_new();
+      utils.book_append_sheet(wb, ws, "Clientes Filtrados");
+      
+      const dataHoje = new Date().toISOString().split('T')[0];
+      writeFile(wb, `Relatorio_Carteira_${dataHoje}.xlsx`);
+
+      addToast("Relatório baixado com sucesso!", "success");
+    } catch (error) {
+      console.error(error);
+      addToast("Erro ao exportar o relatório.", "error");
+    }
   };
 
-  // KPIs do topo
   const totalNET    = lista.reduce((s, c) => s + sv(c.netM), 0);
   const totalRec    = lista.reduce((s, c) => s + sv(c.rec), 0);
   const totalCap    = lista.reduce((s, c) => s + sv(c.cap), 0);
@@ -246,30 +280,68 @@ export function Clientes({ tarefas, reunioes, oport }) {
       )}
 
       {/* Filtros */}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-        <Inp
-          value={busca} onChange={e => setBusca(e.target.value)}
-          placeholder="Pesquisar nome ou conta..." style={{ width: 220 }}
-        />
-        <SelEl value={fSt} onChange={e => setFSt(e.target.value)} opts={optsStatus} />
-        <SelEl value={fSu} onChange={e => setFSu(e.target.value)} opts={optsSuit}   />
-        <SelEl value={fSg} onChange={e => setFSg(e.target.value)} opts={optsSeg}    />
-        <SelEl value={fTp} onChange={e => setFTp(e.target.value)} opts={optsTipo}   />
-        <SelEl value={ord} onChange={e => setOrd(e.target.value)} opts={[
-          { v: "net",  l: "Ordenar: NET"     },
-          { v: "nome", l: "Ordenar: Nome"    },
-          { v: "rec",  l: "Ordenar: Receita" },
-          { v: "cap",  l: "Ordenar: Captação"},
-          { v: "ader", l: "Ordenar: Aderência"},
-          { v: "d0",   l: "Ordenar: Saldo D0"},
-        ]} />
-        <div style={{ display: "flex", gap: 4, marginLeft: "auto" }}>
-          {["tabela", "cards"].map(v => (
-            <Btn key={v} onClick={() => setView(v)} outline={view !== v} small>{v}</Btn>
-          ))}
-          <Btn onClick={exportCSV} outline small>⬇️ CSV</Btn>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end", background: t.lt, padding: "12px", borderRadius: 10, border: `1px solid ${t.brd}` }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 10, color: t.txd, fontWeight: 700, textTransform: "uppercase" }}>Busca Rápida</label>
+          <Inp value={busca} onChange={e => setBusca(e.target.value)} placeholder="Nome ou conta..." style={{ width: 180 }} />
         </div>
-        <span style={{ color: t.txd, fontSize: 12 }}>{lista.length} clientes</span>
+        
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 10, color: t.txd, fontWeight: 700, textTransform: "uppercase" }}>Status</label>
+          <SelEl value={fSt} onChange={e => setFSt(e.target.value)} opts={optsStatus} />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <label style={{ fontSize: 10, color: t.txd, fontWeight: 700, textTransform: "uppercase" }}>Perfil</label>
+          <SelEl value={fSu} onChange={e => setFSu(e.target.value)} opts={optsSuit} />
+        </div>
+
+        {/* 👇 Filtros em Slider */}
+        <div style={{ display: "flex", flexDirection: "column", minWidth: 140, gap: 4 }}>
+          <label style={{ fontSize: 10, color: t.txm, fontWeight: 700, textTransform: "uppercase", display: "flex", justifyContent: "space-between" }}>
+            <span>NET Mínimo</span>
+            <span style={{ color: t.gold }}>{netMin > 0 ? fB(netMin) : "Todos"}</span>
+          </label>
+          <input 
+            type="range" min="0" max="5000000" step="50000" 
+            value={netMin} onChange={e => setNetMin(Number(e.target.value))} 
+            style={{ cursor: "pointer", accentColor: t.gold, height: 4 }} 
+          />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", minWidth: 140, gap: 4 }}>
+          <label style={{ fontSize: 10, color: t.txm, fontWeight: 700, textTransform: "uppercase", display: "flex", justifyContent: "space-between" }}>
+            <span>Aderência Mín.</span>
+            <span style={{ color: t.gold }}>{aderMin > 0 ? `${aderMin}%` : "Todas"}</span>
+          </label>
+          <input 
+            type="range" min="0" max="100" step="5" 
+            value={aderMin} onChange={e => setAderMin(Number(e.target.value))} 
+            style={{ cursor: "pointer", accentColor: t.gold, height: 4 }} 
+          />
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginLeft: "auto" }}>
+          <label style={{ fontSize: 10, color: t.txd, fontWeight: 700, textTransform: "uppercase" }}>Ordenação</label>
+          <SelEl value={ord} onChange={e => setOrd(e.target.value)} opts={[
+            { v: "net",  l: "Ordenar: NET"     },
+            { v: "nome", l: "Ordenar: Nome"    },
+            { v: "rec",  l: "Ordenar: Receita" },
+            { v: "cap",  l: "Ordenar: Captação"},
+            { v: "ader", l: "Ordenar: Aderência"},
+            { v: "d0",   l: "Ordenar: Saldo D0"},
+          ]} />
+        </div>
+
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 4 }}>
+            {["tabela", "cards"].map(v => (
+              <Btn key={v} onClick={() => setView(v)} outline={view !== v} small>{v}</Btn>
+            ))}
+          </div>
+          {/* Botão de Exportação p/ Excel */}
+          <Btn onClick={exportExcel} style={{ background: t.green, color: "#fff", border: "none" }} small>📥 Exportar Excel</Btn>
+        </div>
       </div>
 
       {loading && (
@@ -314,7 +386,7 @@ export function Clientes({ tarefas, reunioes, oport }) {
                       key={c.id || c.conta}
                       style={{ borderBottom: `1px solid ${t.brd}`, cursor: "pointer" }}
                       onClick={() => setDet(c)}
-                      onMouseEnter={e => e.currentTarget.style.background = t.lt}
+                      onMouseEnter={e => e.currentTarget.style.background = `${t.lt}88`}
                       onMouseLeave={e => e.currentTarget.style.background = "transparent"}
                     >
                       <td style={{ padding: "7px 10px", color: t.txm, fontFamily: "monospace", fontSize: 11 }}>{c.conta}</td>
