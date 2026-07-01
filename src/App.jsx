@@ -18,6 +18,7 @@ import { Plano } from "./features/plano/Plano.jsx";
 import { Alertas } from "./features/alertas/Alertas.jsx";
 import { Importacao } from "./features/importacao/Importacao.jsx";
 import { Admin } from "./features/admin/Admin.jsx";
+import Footer from "./components/ui/Footer.jsx";
 
 // 👇 AQUI FOI ADICIONADO A IMPORTAÇÃO DO ToastProvider 👇
 import { ToastProvider } from "./components/ui/index.js";
@@ -194,18 +195,57 @@ export default function App() {
               display: "flex", flexDirection: "column", gap: 10
             }}>
               {/* Logo + botão recolher */}
-              <div style={{ display: "flex", alignItems: "center", justifyContent: collapsed ? "center" : "space-between" }}>
-                {!collapsed && (
-                  <div style={{ color: theme.gold, fontWeight: 900, fontSize: 14, letterSpacing: "1px" }}>◆ CRM</div>
-                )}
-                <button
-                  onClick={() => setCollapsed(c => !c)}
-                  style={{ background: "none", border: "none", color: theme.txm, cursor: "pointer", fontSize: 16, padding: 4, lineHeight: 1 }}
-                  title={collapsed ? "Expandir menu" : "Recolher menu"}
-                >
-                  {collapsed ? "▶" : "◀"}
-                </button>
-              </div>
+
+<div style={{ 
+  display: "flex", 
+  alignItems: "center", 
+  justifyContent: collapsed ? "center" : "space-between" 
+}}>
+
+  {!collapsed && (
+    <div>
+      <div 
+        style={{ 
+          color: theme.gold, 
+          fontWeight: 900, 
+          fontSize: 14, 
+          letterSpacing: "1px" 
+        }}
+      >
+        ◆ Aurora Invest
+      </div>
+
+      <div
+        style={{
+          color: theme.txm,
+          fontSize: 10,
+          fontWeight: 500,
+          letterSpacing: "0.5px",
+          marginTop: 3
+        }}
+      >
+        CRM de Assessoria
+      </div>
+    </div>
+  )}
+
+  <button
+    onClick={() => setCollapsed(c => !c)}
+    style={{ 
+      background: "none", 
+      border: "none", 
+      color: theme.txm, 
+      cursor: "pointer", 
+      fontSize: 16, 
+      padding: 4, 
+      lineHeight: 1 
+    }}
+    title={collapsed ? "Expandir menu" : "Recolher menu"}
+  >
+    {collapsed ? "▶" : "◀"}
+  </button>
+
+</div>
 
               {/* User + Theme — só expandido */}
               {!collapsed && (
